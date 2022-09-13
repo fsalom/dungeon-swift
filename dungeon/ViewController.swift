@@ -8,11 +8,26 @@
 import UIKit
 
 class ViewController: UIViewController {
-    let squarePerRow = 5
+    let squarePerRow = 10
     var sizeOfSquare: CGFloat = 0
     var character: UIView!
     var numberOfRows: Int = 0
+    var controlDuration = 0.5
     var board: [[Int]] = [[]]
+
+    struct Texture {
+        var image: UIImage!
+        var isBlocked: Bool!
+    }
+
+    struct Terrain {
+        var texture: Texture!
+        var view: UIImageView!
+        init(texture: Texture, size: CGFloat) {
+            self.view = UIImageView(frame: CGRect(x: 0, y: 0, width: size, height: size))
+            self.view.image = texture.image
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,69 +36,128 @@ class ViewController: UIViewController {
         numberOfRows = Int(UIScreen.main.bounds.height / CGFloat(squarePerRow))
         loadMap()
         character = loadCharacter()
+        loadController()
     }
 
     func loadMap() {
         for n in 0...numberOfRows {
             let positionY = CGFloat(n) * sizeOfSquare
             let row = UIStackView(frame: CGRect(x: 0, y: positionY, width: UIScreen.main.bounds.width, height: sizeOfSquare))
-            for terrain in loadRow(){
-                row.addArrangedSubview(terrain)
+            let terrains = loadRow()
+            for terrain in terrains {
+                row.addArrangedSubview(terrain.view)
                 row.distribution = .fillEqually
             }
             row.backgroundColor = .black
             self.view.addSubview(row)
         }
-
     }
 
-    func loadRow() -> [UIImageView]{
-        let array = ["concrete2", "concrete3", "door", "steel", "steel2", "floor"]
+    func loadRow() -> [Terrain]{
+        let textures = [
+            Texture(image: UIImage(named: "concrete")!, isBlocked: false),
+            Texture(image: UIImage(named: "concrete2")!, isBlocked: false),
+            Texture(image: UIImage(named: "concrete3")!, isBlocked: false),
+            Texture(image: UIImage(named: "door")!, isBlocked: true),
+            Texture(image: UIImage(named: "steel")!, isBlocked: true),
+            Texture(image: UIImage(named: "steel2")!, isBlocked: true),
+            Texture(image: UIImage(named: "floor")!, isBlocked: false)
+        ]
 
-        var terrains: [UIImageView] = []
+        var mapPieces: [Terrain] = []
         for _ in 0...squarePerRow - 1{
-            let square = UIImageView(frame: CGRect(x: 0, y: 0, width: sizeOfSquare, height: sizeOfSquare))
             let isConcrete = arc4random_uniform(20) <= 18 ? true : false
-            square.image = isConcrete ? UIImage(named: "concrete") : UIImage(named: array.randomElement()!)
-            terrains.append(square)
+            let texture = isConcrete ? textures[0] : textures.randomElement()!
+            mapPieces.append(Terrain(texture: texture, size: sizeOfSquare))
         }
 
-        return terrains
+        return mapPieces
     }
 
     func loadCharacter() -> UIView{
-        let character = UIImageView(frame: CGRect(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height - 200, width: 50, height: 50))
-        character.layer.cornerRadius = 25
+        let character = UIImageView(frame: CGRect(x: 0, y: 0, width: self.sizeOfSquare, height: self.sizeOfSquare))
+        character.layer.cornerRadius = self.sizeOfSquare/2
         character.backgroundColor = .white
 
         self.view.addSubview(character)
         return character
     }
 
-    func moveUp(){
-        UIView.animate(withDuration: 1.0, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.y = self.character.frame.origin.y - 200
+    @objc func moveUp(){
+        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
+            self.character.frame.origin.y = self.character.frame.origin.y - self.sizeOfSquare
         } completion: { finished in
         }
     }
-    func moveDown(){
-        UIView.animate(withDuration: 1.0, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.y = self.character.frame.origin.y + 200
+    @objc func moveDown(){
+        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
+            self.character.frame.origin.y = self.character.frame.origin.y + self.sizeOfSquare
         } completion: { finished in
         }
     }
-    func moveLeft(){
-        UIView.animate(withDuration: 1.0, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.x = self.character.frame.origin.x - 200
+    @objc func moveLeft(){
+        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
+            self.character.frame.origin.x = self.character.frame.origin.x - self.sizeOfSquare
         } completion: { finished in
         }
     }
-    func moveRight(){
-        UIView.animate(withDuration: 1.0, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.x = self.character.frame.origin.x + 200
+    @objc func moveRight(){
+        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
+            self.character.frame.origin.x = self.character.frame.origin.x + self.sizeOfSquare
         } completion: { finished in
         }
     }
 
+    func loadController(){
+        let controllerSize: CGFloat = 120.0
+        let buttonSize: CGFloat = 40.0
+
+        let image = UIImage(named: "controller")
+        let controllerBackground = UIImageView(frame: CGRect(x: 20, y: UIScreen.main.bounds.height - 200, width: controllerSize, height: controllerSize))
+        controllerBackground.image = image
+
+        let mainStack = UIStackView(frame: CGRect(x: 20, y: UIScreen.main.bounds.height - 200, width: controllerSize, height: controllerSize))
+        mainStack.axis = .vertical
+
+        let upButton = UIButton(type: UIButton.ButtonType.custom)
+        upButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
+        upButton.addTarget(self, action: #selector(moveUp), for: .touchUpInside)
+
+        let leftButton = UIButton(type: UIButton.ButtonType.custom)
+        leftButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
+        leftButton.addTarget(self, action: #selector(moveLeft), for: .touchUpInside)
+
+        let rightButton = UIButton(type: UIButton.ButtonType.custom)
+        rightButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
+        rightButton.addTarget(self, action: #selector(moveRight), for: .touchUpInside)
+
+        let downButton = UIButton(type: UIButton.ButtonType.custom)
+        downButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
+        downButton.addTarget(self, action: #selector(moveDown), for: .touchUpInside)
+
+        let firstLine = UIStackView(frame: CGRect(x: 20, y: UIScreen.main.bounds.height - 200, width: controllerSize, height: buttonSize))
+        firstLine.axis = .horizontal
+        firstLine.addArrangedSubview(upButton)
+        firstLine.distribution = .fillEqually
+
+        let secondLine = UIStackView(frame: CGRect(x: 0, y: 0, width: controllerSize, height: buttonSize))
+        secondLine.axis = .horizontal
+        secondLine.addArrangedSubview(leftButton)
+        secondLine.addArrangedSubview(rightButton)
+        secondLine.distribution = .fillEqually
+
+        let thirdLine = UIStackView(frame: CGRect(x: 0, y:0, width: controllerSize, height: buttonSize))
+        thirdLine.axis = .horizontal
+        thirdLine.addArrangedSubview(downButton)
+        thirdLine.distribution = .fillEqually
+
+        mainStack.distribution = .fillEqually
+        mainStack.addArrangedSubview(firstLine)
+        mainStack.addArrangedSubview(secondLine)
+        mainStack.addArrangedSubview(thirdLine)
+
+        self.view.addSubview(controllerBackground)
+        self.view.addSubview(mainStack)
+    }
 }
 
