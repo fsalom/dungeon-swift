@@ -8,14 +8,17 @@
 import UIKit
 
 class ViewController: UIViewController {
-    let squarePerRow = 10
+    @IBOutlet weak var positionStack: UIStackView!
+    @IBOutlet weak var Xlabel: UILabel!
+    @IBOutlet weak var YLabel: UILabel!
+    let squarePerRow = 12
     var sizeOfSquare: CGFloat = 0
     var character: UIView!
     var numberOfRows: Int = 0
     var controlDuration = 0.5
     var board: [[Int]] = [[]]
-    var current: Position!
     var map = [[Terrain]]()
+    var isPressed = false
 
     struct Position {
         var x: Int!
@@ -47,7 +50,7 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        current = Position(x: 0, y: 0)
+
         sizeOfSquare = UIScreen.main.bounds.width / CGFloat(squarePerRow)
         numberOfRows = Int(UIScreen.main.bounds.height / CGFloat(sizeOfSquare))
         loadMap()
@@ -102,7 +105,7 @@ class ViewController: UIViewController {
         return character
     }
 
-    func canMove(to position: Position) -> Bool {
+    func canMove(to position: Position) async -> Bool {
         if position.x < 0 || position.y < 0 || position.x >= map[0].count || position.y >= map.count{
             return false
         }
@@ -112,8 +115,19 @@ class ViewController: UIViewController {
         return true
     }
 
-    func check(this movement: Movement) -> Bool {
-        var futurePosition: Position = current
+    func getPosition() -> Position {
+        var current = Position()
+        current.x = Int(character.layer.position.x / sizeOfSquare)
+        current.y = Int(character.layer.position.y / sizeOfSquare)
+        return current
+    }
+
+    func check(this movement: Movement) async -> Bool {
+        let currentPosition = getPosition()
+        Xlabel.text = "\(currentPosition.x ?? 0)"
+        YLabel.text = "\(currentPosition.y ?? 0)"
+        self.view.bringSubviewToFront(positionStack)
+        var futurePosition: Position = currentPosition
         switch movement {
         case .up:
             futurePosition.y -= 1
@@ -124,42 +138,55 @@ class ViewController: UIViewController {
         case .right:
             futurePosition.x += 1
         }
-        if canMove(to: futurePosition) {
-            current = futurePosition
+        if await canMove(to: futurePosition) {
             return true
         } else {
             return false
         }
-
     }
 
     @objc func moveUp(){
-        if !check(this: .up) { return }
-        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.y = self.character.frame.origin.y - self.sizeOfSquare
-        } completion: { finished in
+        isPressed = true
+        move(with: .up)
+    }
+
+    func move(with movement: Movement) {
+        Task {
+            if await !check(this: movement) { return }
+            if !isPressed { return }
+            UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseInOut) {
+                switch movement {
+                case .up:
+                    self.character.frame.origin.y = self.character.frame.origin.y - self.sizeOfSquare
+                case .down:
+                    self.character.frame.origin.y = self.character.frame.origin.y + self.sizeOfSquare
+                case .left:
+                    self.character.frame.origin.x = self.character.frame.origin.x - self.sizeOfSquare
+                case .right:
+                    self.character.frame.origin.x = self.character.frame.origin.x + self.sizeOfSquare
+                }
+
+            } completion: { finished in
+                self.move(with: movement)
+            }
         }
     }
+
+    @objc func stop(){
+        isPressed = false
+    }
+
     @objc func moveDown(){
-        if !check(this: .down) { return }
-        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.y = self.character.frame.origin.y + self.sizeOfSquare
-        } completion: { finished in
-        }
+        isPressed = true
+        move(with: .down)
     }
     @objc func moveLeft(){
-        if !check(this: .left) { return }
-        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.x = self.character.frame.origin.x - self.sizeOfSquare
-        } completion: { finished in
-        }
+        isPressed = true
+        move(with: .left)
     }
     @objc func moveRight(){
-        if !check(this: .right) { return }
-        UIView.animate(withDuration: self.controlDuration, delay: 0, options: .curveEaseIn) {
-            self.character.frame.origin.x = self.character.frame.origin.x + self.sizeOfSquare
-        } completion: { finished in
-        }
+        isPressed = true
+        move(with: .right)
     }
 
     func loadController(){
@@ -175,19 +202,23 @@ class ViewController: UIViewController {
 
         let upButton = UIButton(type: UIButton.ButtonType.custom)
         upButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
-        upButton.addTarget(self, action: #selector(moveUp), for: .touchUpInside)
+        upButton.addTarget(self, action: #selector(moveUp), for: .touchDown)
+        upButton.addTarget(self, action: #selector(stop), for: .touchUpInside)
 
         let leftButton = UIButton(type: UIButton.ButtonType.custom)
         leftButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
-        leftButton.addTarget(self, action: #selector(moveLeft), for: .touchUpInside)
+        leftButton.addTarget(self, action: #selector(moveLeft), for: .touchDown)
+        leftButton.addTarget(self, action: #selector(stop), for: .touchUpInside)
 
         let rightButton = UIButton(type: UIButton.ButtonType.custom)
         rightButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
-        rightButton.addTarget(self, action: #selector(moveRight), for: .touchUpInside)
+        rightButton.addTarget(self, action: #selector(moveRight), for: .touchDown)
+        rightButton.addTarget(self, action: #selector(stop), for: .touchUpInside)
 
         let downButton = UIButton(type: UIButton.ButtonType.custom)
         downButton.frame = CGRect(x: 0, y: 0, width: buttonSize, height: buttonSize)
-        downButton.addTarget(self, action: #selector(moveDown), for: .touchUpInside)
+        downButton.addTarget(self, action: #selector(moveDown), for: .touchDown)
+        downButton.addTarget(self, action: #selector(stop), for: .touchUpInside)
 
         let firstLine = UIStackView(frame: CGRect(x: 20, y: UIScreen.main.bounds.height - 200, width: controllerSize, height: buttonSize))
         firstLine.axis = .horizontal
@@ -214,4 +245,3 @@ class ViewController: UIViewController {
         self.view.addSubview(mainStack)
     }
 }
-
