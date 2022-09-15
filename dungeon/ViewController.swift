@@ -20,11 +20,6 @@ class ViewController: UIViewController {
     var map = [[Terrain]]()
     var isPressed = false
 
-    struct Position {
-        var x: Int!
-        var y: Int!
-    }
-
     struct Texture {
         var image: UIImage!
         var isBlocked: Bool!
@@ -50,7 +45,6 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-
         sizeOfSquare = UIScreen.main.bounds.width / CGFloat(squarePerRow)
         numberOfRows = Int(UIScreen.main.bounds.height / CGFloat(sizeOfSquare))
         loadMap()
@@ -83,14 +77,12 @@ class ViewController: UIViewController {
             Texture(image: UIImage(named: "steel2")!, isBlocked: true),
             Texture(image: UIImage(named: "floor")!, isBlocked: false)
         ]
-
         var mapPieces: [Terrain] = []
         for _ in 0...squarePerRow - 1{
             let isConcrete = arc4random_uniform(20) <= 18 ? true : false
             let texture = isConcrete ? textures[0] : textures.randomElement()!
             mapPieces.append(Terrain(texture: texture, size: sizeOfSquare))
         }
-
         return mapPieces
     }
 
@@ -98,36 +90,32 @@ class ViewController: UIViewController {
         let image = UIImage(named: "character")
         let character = UIImageView(frame: CGRect(x: 0, y: 0, width: self.sizeOfSquare, height: self.sizeOfSquare))
         character.image = image
-        //character.layer.cornerRadius = self.sizeOfSquare/2
-        //character.backgroundColor = .white
-
         self.view.addSubview(character)
         return character
     }
 
-    func canMove(to position: Position) async -> Bool {
-        if position.x < 0 || position.y < 0 || position.x >= map[0].count || position.y >= map.count{
+    func canMove(to position: CGPoint) async -> Bool {
+        let x = Int(position.x)
+        let y = Int(position.y)
+        if x < 0 || y < 0 || x >= map[0].count || y >= map.count{
             return false
         }
-        if map[position.y][position.x].texture.isBlocked {
+        if map[y][x].texture.isBlocked {
             return false
         }
         return true
     }
 
-    func getPosition() -> Position {
-        var current = Position()
-        current.x = Int(character.layer.position.x / sizeOfSquare)
-        current.y = Int(character.layer.position.y / sizeOfSquare)
-        return current
+    func getPosition() -> CGPoint {
+        CGPoint(x: Int(character.layer.position.x / sizeOfSquare), y: Int(character.layer.position.y / sizeOfSquare))
     }
 
     func check(this movement: Movement) async -> Bool {
         let currentPosition = getPosition()
-        Xlabel.text = "\(currentPosition.x ?? 0)"
-        YLabel.text = "\(currentPosition.y ?? 0)"
+        Xlabel.text = "\(currentPosition.x)"
+        YLabel.text = "\(currentPosition.y)"
         self.view.bringSubviewToFront(positionStack)
-        var futurePosition: Position = currentPosition
+        var futurePosition: CGPoint = currentPosition
         switch movement {
         case .up:
             futurePosition.y -= 1
@@ -165,7 +153,6 @@ class ViewController: UIViewController {
                 case .right:
                     self.character.frame.origin.x = self.character.frame.origin.x + self.sizeOfSquare
                 }
-
             } completion: { finished in
                 self.move(with: movement)
             }
@@ -175,7 +162,6 @@ class ViewController: UIViewController {
     @objc func stop(){
         isPressed = false
     }
-
     @objc func moveDown(){
         isPressed = true
         move(with: .down)
@@ -192,11 +178,9 @@ class ViewController: UIViewController {
     func loadController(){
         let controllerSize: CGFloat = 120.0
         let buttonSize: CGFloat = 40.0
-
         let image = UIImage(named: "controller")
         let controllerBackground = UIImageView(frame: CGRect(x: 20, y: UIScreen.main.bounds.height - 200, width: controllerSize, height: controllerSize))
         controllerBackground.image = image
-
         let mainStack = UIStackView(frame: CGRect(x: 20, y: UIScreen.main.bounds.height - 200, width: controllerSize, height: controllerSize))
         mainStack.axis = .vertical
 
